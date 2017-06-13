@@ -2,34 +2,56 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"time"
 )
 
-type Response struct {
+type HTTPResponse struct {
+	url    string
 	status string
-	body   []byte
+	err    error
 }
 
 func main() {
-	resChan := make(chan Response)
-
-	urls := [2]string{
+	ch := make(chan HTTPResponse)
+	urls := [...]string{
 		"https://github.com",
-		"https://golang.org/",
+		"https://golang.org",
+		"https://in.va.lid.zet",
 	}
 
 	for _, url := range urls {
-		go checkUrl(url, resChan)
+		go func(url string) {
+			fmt.Printf("Fetching %s \n", url)
+			res, err := http.Get(url)
+			if err != nil {
+				ch <- HTTPResponse{url: url, err: err}
+				return
+			}
+			ch <- HTTPResponse{url, res.Status, err}
+		}(url)
 	}
 
-	for range urls {
-		fmt.Println((<-resChan).status)
+	var count int
+loop:
+	for {
+		select {
+		case r := <-ch:
+			count++
+			if r.err != nil {
+				fmt.Printf("%s -> %v \n", r.url, r.err)
+				return
+			}
+			fmt.Printf("%s -> %v \n", r.url, r.status)
+			if count == len(urls) {
+				break loop
+			}
+		case <-time.After(5 * time.Second):
+			count++
+			fmt.Printf("timeout during fetching url \n")
+			if count == len(urls) {
+				break loop
+			}
+		}
 	}
-}
-
-func checkUrl(url string, ch chan<- Response) {
-	res, _ := http.Get(url)
-	body, _ := ioutil.ReadAll(res.Body)
-	ch <- Response{res.Status, body}
 }

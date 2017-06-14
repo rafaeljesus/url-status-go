@@ -6,14 +6,14 @@ import (
 	"time"
 )
 
-type HTTPResponse struct {
+type httpResponse struct {
 	url    string
 	status string
 	err    error
 }
 
 func main() {
-	ch := make(chan HTTPResponse)
+	ch := make(chan httpResponse)
 	urls := [...]string{
 		"https://github.com",
 		"https://golang.org",
@@ -25,10 +25,10 @@ func main() {
 			fmt.Printf("Fetching %s \n", url)
 			res, err := http.Get(url)
 			if err != nil {
-				ch <- HTTPResponse{url: url, err: err}
+				ch <- httpResponse{url: url, err: err}
 				return
 			}
-			ch <- HTTPResponse{url, res.Status, err}
+			ch <- httpResponse{url, res.Status, err}
 		}(url)
 	}
 
